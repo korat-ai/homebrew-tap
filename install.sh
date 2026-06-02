@@ -62,6 +62,7 @@ sha256_file() {
 TMPDIR_KORAT="$(mktemp -d)"
 # shellcheck disable=SC2329  # invoked via trap, not a direct call
 cleanup() {
+  # shellcheck disable=SC2317  # reached via trap EXIT — shellcheck's reachability check can't see it
   rm -rf "${TMPDIR_KORAT}"
 }
 trap cleanup EXIT
@@ -73,11 +74,16 @@ trap cleanup EXIT
 
 if [ "${KORAT_VERSION}" = "latest" ]; then
   printf 'Resolving latest version...\n'
-  RESOLVED_VERSION="$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
-    'https://github.com/korat-ai/korat-mcp-hub/releases/latest/download/SHA256SUMS' \
-    | sed -nE 's|.*/releases/download/(v[^/]+)/SHA256SUMS|\1|p')"
+  # Read the FIRST redirect (latest -> versioned), which carries the tag. Do NOT
+  # use -L: following all hops lands on the signed release-assets URL, which no
+  # longer contains the version path.
+  RESOLVED_VERSION="$(curl -fsSI \
+    'https://github.com/korat-ai/homebrew-tap/releases/latest/download/SHA256SUMS' \
+    | tr -d '\r' \
+    | sed -nE 's|^[Ll]ocation:[[:space:]]*.*/releases/download/(v[^/]+)/SHA256SUMS.*|\1|p' \
+    | head -1)"
   if [ -z "${RESOLVED_VERSION}" ]; then
-    printf 'Could not resolve latest version from GitHub redirect.\n' >&2
+    printf 'Could not resolve latest version.\n' >&2
     exit 1
   fi
   printf '  -> %s\n' "${RESOLVED_VERSION}"
@@ -86,7 +92,7 @@ else
 fi
 
 ASSET="korat-cli-${RESOLVED_VERSION}-${PLATFORM}.tar.gz"
-BASE="https://github.com/korat-ai/korat-mcp-hub/releases/download/${RESOLVED_VERSION}"
+BASE="https://github.com/korat-ai/homebrew-tap/releases/download/${RESOLVED_VERSION}"
 
 # ── Download ──────────────────────────────────────────────────────────────────
 
