@@ -133,12 +133,30 @@ if [ "${SYS}" = "Darwin" ]; then
   xattr -d com.apple.quarantine "${KORAT_INSTALL_DIR}/korat" 2>/dev/null || true
 fi
 
-# ── Done — print PATH hint ────────────────────────────────────────────────────
+# ── Done — add to PATH (persist) ──────────────────────────────────────────────
 
 printf '\nInstalled korat to %s\n' "${KORAT_INSTALL_DIR}/korat"
-printf 'Add it to your PATH:\n'
-# shellcheck disable=SC2016  # $HOME is intentionally unexpanded — we are printing a shell snippet
-printf '  echo '\''export PATH="$HOME/.korat/bin:$PATH"'\'' >> ~/.zshrc\n'
-printf '\nThen reopen your shell and run: korat version\n'
+
+case ":${PATH}:" in
+  *":${KORAT_INSTALL_DIR}:"*) on_path=1 ;;
+  *) on_path=0 ;;
+esac
+
+if [ "${on_path}" -eq 1 ]; then
+  printf 'Already on your PATH. Run: korat version\n'
+else
+  case "$(basename "${SHELL:-/bin/sh}")" in
+    zsh)  rc="${HOME}/.zshrc" ;;
+    bash) rc="${HOME}/.bashrc" ;;
+    *)    rc="${HOME}/.profile" ;;
+  esac
+  line="export PATH=\"${KORAT_INSTALL_DIR}:\$PATH\""
+  if ! grep -qF "${KORAT_INSTALL_DIR}" "${rc}" 2>/dev/null; then
+    printf '\n# Added by the Korat installer\n%s\n' "${line}" >> "${rc}"
+    printf 'Added to PATH in %s\n' "${rc}"
+  fi
+  printf 'Run this now (or open a new terminal):\n  source %s\n' "${rc}"
+  printf 'Then: korat version\n'
+fi
 
 exit 0
