@@ -6,14 +6,20 @@
 # One-line install for Korat CLI:
 #   curl -fsSL https://get.korat.ai/install.sh | sh
 #
+# Channels:
+#   curl -fsSL https://get.korat.ai/install.sh | sh                 # stable (default)
+#   curl -fsSL https://get.korat.ai/install.sh | sh -s -- --dev     # latest pre-release
+#
 # Environment overrides (all optional):
-#   KORAT_VERSION      Tag to install, e.g. v0.1.0. Default: latest
+#   KORAT_VERSION      Tag to install, e.g. v0.1.0. Default: latest (of the channel)
+#   KORAT_CHANNEL      stable | dev. Default: stable. `--dev` is shorthand for dev.
 #   KORAT_INSTALL_DIR  Where to put the binary. Default: ~/.korat/bin
 #
 # The script:
 #   1. Detects OS + architecture.
-#   2. Resolves the exact release version (follows GitHub's well-known
-#      redirect — no GitHub API call, avoiding the 60 req/hr anon rate limit).
+#   2. Resolves the exact release version. Stable follows GitHub's well-known
+#      /releases/latest redirect (no API call, no 60 req/hr anon rate limit);
+#      the dev channel queries the releases API for the newest pre-release tag.
 #   3. Downloads korat-cli-<version>-<platform>.tar.gz + SHA256SUMS.
 #   4. Verifies SHA-256 (mandatory; no skip path).
 #   5. Extracts the binary to KORAT_INSTALL_DIR and renames to "korat".
@@ -24,6 +30,19 @@ set -eu
 
 KORAT_VERSION="${KORAT_VERSION:-latest}"
 KORAT_INSTALL_DIR="${KORAT_INSTALL_DIR:-$HOME/.korat/bin}"
+KORAT_CHANNEL="${KORAT_CHANNEL:-stable}"
+
+# Parse CLI args (e.g. `curl … | sh -s -- --dev`). Env vars remain valid too.
+for _arg in "$@"; do
+  case "${_arg}" in
+    --dev)    KORAT_CHANNEL="dev" ;;
+    --stable) KORAT_CHANNEL="stable" ;;
+    *)
+      printf 'Unknown option: %s (supported: --dev, --stable)\n' "${_arg}" >&2
+      exit 1
+      ;;
+  esac
+done
 
 # ── Platform detection ────────────────────────────────────────────────────────
 
@@ -69,14 +88,36 @@ trap cleanup EXIT
 
 # ── Resolve concrete version ──────────────────────────────────────────────────
 # GitHub releases/<version>/download/<asset> requires an exact version in the
-# asset filename. For VERSION=latest we follow the well-known /latest/download
-# redirect to discover the concrete tag, rather than calling the GitHub API.
+# asset filename. An explicit KORAT_VERSION wins; otherwise we resolve the
+# channel's newest tag.
 
-if [ "${KORAT_VERSION}" = "latest" ]; then
+if [ "${KORAT_VERSION}" != "latest" ]; then
+  # Explicit pin (e.g. KORAT_VERSION=v0.2.8-dev.1) — honoured for either channel.
+  RESOLVED_VERSION="${KORAT_VERSION}"
+elif [ "${KORAT_CHANNEL}" = "dev" ]; then
+  printf 'Resolving latest dev (pre-release) version...\n'
+  # Pre-releases are not pointed to by /releases/latest, so query the public tap's
+  # releases API (returned newest-first) and take the first pre-release tag — one
+  # whose SemVer carries a '-' suffix (e.g. v0.2.8-dev.1). The '-' filter is baked
+  # into the sed pattern (v[^"]*-[^"]*) to stay portable — `grep -- '-'` breaks on
+  # some grep variants (e.g. ugrep). This uses the anon GitHub API (60 req/hr) only
+  # on the dev path; the stable path stays API-free.
+  RESOLVED_VERSION="$(curl -fsSL \
+    'https://api.github.com/repos/korat-ai/homebrew-tap/releases?per_page=30' \
+    | tr -d '\r' \
+    | sed -nE 's/^[[:space:]]*"tag_name":[[:space:]]*"(v[^"]*-[^"]*)".*/\1/p' \
+    | head -1)"
+  if [ -z "${RESOLVED_VERSION}" ]; then
+    printf 'Could not resolve a dev (pre-release) version (none published yet?).\n' >&2
+    exit 1
+  fi
+  printf '  -> %s\n' "${RESOLVED_VERSION}"
+else
   printf 'Resolving latest version...\n'
   # Read the FIRST redirect (latest -> versioned), which carries the tag. Do NOT
   # use -L: following all hops lands on the signed release-assets URL, which no
-  # longer contains the version path.
+  # longer contains the version path. GitHub's /releases/latest deliberately
+  # ignores pre-releases, so the stable channel never picks up a dev build.
   RESOLVED_VERSION="$(curl -fsSI \
     'https://github.com/korat-ai/homebrew-tap/releases/latest/download/SHA256SUMS' \
     | tr -d '\r' \
@@ -87,8 +128,6 @@ if [ "${KORAT_VERSION}" = "latest" ]; then
     exit 1
   fi
   printf '  -> %s\n' "${RESOLVED_VERSION}"
-else
-  RESOLVED_VERSION="${KORAT_VERSION}"
 fi
 
 ASSET="korat-cli-${RESOLVED_VERSION}-${PLATFORM}.tar.gz"
