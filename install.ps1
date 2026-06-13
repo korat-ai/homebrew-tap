@@ -26,7 +26,10 @@ param(
     [switch]$Stable
 )
 
-Set-StrictMode -Version Latest
+# NOTE: Set-StrictMode -Version Latest is intentionally NOT used. This script is piped to
+# `iex` on arbitrary Windows machines (Windows PowerShell 5.1 .. PowerShell 7+); under strict
+# mode a benign missing-property access (e.g. on older .NET Framework) becomes a fatal
+# PropertyNotFoundStrict, breaking the install. Critical values are guarded explicitly below.
 $ErrorActionPreference = 'Stop'
 
 # ── Channel and version resolution ───────────────────────────────────────────
@@ -41,12 +44,20 @@ $pinnedVersion = if ($env:KORAT_VERSION -and $env:KORAT_VERSION -ne 'latest') {
 
 # ── Architecture detection ────────────────────────────────────────────────────
 
-$arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
-if ($arch -ne [System.Runtime.InteropServices.Architecture]::X64) {
-    Write-Error "Unsupported architecture: $arch. Only x64 is supported on Windows at this time. See https://github.com/korat-ai/korat-mcp-hub/releases"
-    exit 1
+# Use the PROCESSOR_ARCHITECTURE env var rather than
+# [RuntimeInformation]::OSArchitecture — the latter is absent on older .NET Framework
+# (Windows PowerShell 5.1) and throws under strict mode. PROCESSOR_ARCHITEW6432 is set when
+# a 32-bit PowerShell runs on 64-bit Windows (WOW64), so check it first.
+$arch = [Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITEW6432')
+if (-not $arch) { $arch = [Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITECTURE') }
+switch ("$arch".ToUpperInvariant()) {
+    'AMD64' { $platform = 'win-x64' }
+    'ARM64' { $platform = 'win-x64' }  # Windows on ARM runs the x64 build via emulation
+    default {
+        Write-Error "Unsupported architecture: $arch. Only x64 is supported on Windows at this time. See https://github.com/korat-ai/homebrew-tap/releases"
+        exit 1
+    }
 }
-$platform = 'win-x64'
 
 # ── Install directory ─────────────────────────────────────────────────────────
 

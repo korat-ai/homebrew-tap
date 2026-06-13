@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # shellcheck shell=sh
 # https://get.korat.ai/install.sh — sourced from
-# https://github.com/korat-ai/korat-mcp-hub/blob/HEAD/scripts/install.sh
+# https://get.korat.ai/install.sh
 #
 # One-line install for Korat CLI:
 #   curl -fsSL https://get.korat.ai/install.sh | sh
@@ -55,7 +55,7 @@ case "${SYS}/${ARCH}" in
   Linux/x86_64)   PLATFORM="linux-x64"    ;;
   Linux/aarch64)  PLATFORM="linux-arm64"  ;;
   *)
-    printf 'Unsupported platform: %s %s. See https://github.com/korat-ai/korat-mcp-hub/releases for available builds.\n' \
+    printf 'Unsupported platform: %s %s. See https://github.com/korat-ai/homebrew-tap/releases for available builds.\n' \
       "${SYS}" "${ARCH}" >&2
     exit 1
     ;;
