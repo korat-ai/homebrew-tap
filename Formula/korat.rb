@@ -1,27 +1,27 @@
 class Korat < Formula
   desc "Korat MCP Hub CLI — local-first MCP server access through a managed relay"
   homepage "https://get.korat.ai"
-  version "0.4.0"
+  version "0.4.1"
 
   on_macos do
     on_arm do
-      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.0/korat-cli-v0.4.0-darwin-arm64.tar.gz"
-      sha256 "e0ed49486dcd84c86a759e1dd36d2981f92506602cbbfd29a774f7f20b1dee6f"
+      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.1/korat-cli-v0.4.1-darwin-arm64.tar.gz"
+      sha256 "a20744967d3423ef6c51d01e16d85e7a5c60b2e89a46c870c95c575ac4171c19"
     end
     on_intel do
-      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.0/korat-cli-v0.4.0-darwin-x64.tar.gz"
-      sha256 "12d47029fbf2cba1a4d17b5bcf4e979b6544ca019ed72695062c13e27751d91e"
+      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.1/korat-cli-v0.4.1-darwin-x64.tar.gz"
+      sha256 "a08ecc46370edbd3e390f7907e9e5024584f97f6cf8b5448402d88f5011830fa"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.0/korat-cli-v0.4.0-linux-arm64.tar.gz"
-      sha256 "82d3f7aab1c763af140544d81be5e0363cad0cf2e9a9334f09ef5596f8aa81b4"
+      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.1/korat-cli-v0.4.1-linux-arm64.tar.gz"
+      sha256 "47ef90b598e2a4bf810cfba27d1fc496d839ec2d670eb81aa9c7703958dca78f"
     end
     on_intel do
-      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.0/korat-cli-v0.4.0-linux-x64.tar.gz"
-      sha256 "88af1eb447c98c41882c18400354b4da3a9311d8534eed0acea0ae296f42dd0a"
+      url "https://github.com/korat-ai/homebrew-tap/releases/download/v0.4.1/korat-cli-v0.4.1-linux-x64.tar.gz"
+      sha256 "df1e7af243077fb35eae4183f2a99f9dc92a8eb11f34f8eca86448f55ebde596"
     end
   end
 
